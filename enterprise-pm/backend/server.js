@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const http = require('http');
+const path = require('path');
 const { Server } = require('socket.io');
 require('dotenv').config();
 
@@ -12,6 +13,7 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const resourceRoutes = require('./routes/resourceRoutes');
 const githubRoutes = require('./routes/githubRoutes');
+const settingsRoutes = require('./routes/settingsRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -39,11 +41,23 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/resources', resourceRoutes);
 app.use('/api/github', githubRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Health check
-app.get('/', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.json({ message: 'Enterprise PM API is running' });
 });
+
+// ── Serve frontend build in production / Docker ──
+const frontendDist = path.join(__dirname, '..', 'frontend', 'dist');
+const fs = require('fs');
+if (fs.existsSync(frontendDist)) {
+  app.use(express.static(frontendDist));
+  // SPA catch-all: any non-API route serves index.html
+  app.get(/^\/(?!api).*/, (req, res) => {
+    res.sendFile(path.join(frontendDist, 'index.html'));
+  });
+}
 
 // Socket.IO connection handler
 io.on('connection', (socket) => {
@@ -67,15 +81,28 @@ io.on('connection', (socket) => {
 // Connect to MongoDB and start server
 const PORT = process.env.PORT || 5000;
 
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log('Connected to MongoDB');
-    server.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+if (process.env.MONGO_URI) {
+  mongoose
+    .connect(process.env.MONGO_URI)
+    .then(() => {
+      console.log('Connected to MongoDB');
+      server.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+      });
+    })
+    .catch((err) => {
+      console.error('MongoDB connection error:', err.message);
+      // Still start the server so /setup page is accessible
+      console.log('Starting server without DB — visit /setup to configure');
+      server.listen(PORT, () => {
+        console.log(`Server running on port ${PORT} (no database)`);
+      });
     });
-  })
-  .catch((err) => {
-    console.error('MongoDB connection error:', err.message);
-    process.exit(1);
+} else {
+  // No MONGO_URI — first-time setup mode
+  console.log('No MONGO_URI configured — starting in setup mode');
+  console.log('Visit http://localhost:' + PORT + '/setup to configure');
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT} (setup mode)`);
   });
+}

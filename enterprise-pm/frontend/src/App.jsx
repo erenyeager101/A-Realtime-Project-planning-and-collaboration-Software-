@@ -16,6 +16,8 @@ import ProjectHealth from './pages/ProjectHealth';
 import ResourceHub from './pages/ResourceHub';
 import GitHubDashboard from './pages/GitHubDashboard';
 import ProjectGitHub from './pages/ProjectGitHub';
+import Settings from './pages/Settings';
+import Setup from './pages/Setup';
 
 function App() {
   return (
@@ -23,6 +25,7 @@ function App() {
       <AuthProvider>
         <SocketProvider>
           <Routes>
+            <Route path="/setup" element={<Setup />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/onboarding" element={<PrivateRoute><Onboarding /></PrivateRoute>} />
@@ -41,6 +44,9 @@ function App() {
             {/* GitHub Integration */}
             <Route path="/github" element={<PrivateRoute><GitHubDashboard /></PrivateRoute>} />
             <Route path="/project/:id/github" element={<PrivateRoute><ProjectGitHub /></PrivateRoute>} />
+
+            {/* Admin Settings */}
+            <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
 
             <Route path="*" element={<Navigate to="/dashboard" />} />
           </Routes>
