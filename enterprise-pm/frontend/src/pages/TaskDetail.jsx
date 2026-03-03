@@ -1,7 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { getTask, updateTask, deleteTask, addComment } from '../services/taskService';
+import {
+  getTask,
+  updateTask,
+  deleteTask,
+  addComment,
+  getTasksByProject,
+  updateTaskSprint,
+  updateTaskDependencies,
+} from '../services/taskService';
 import { createIssueFromTask, createBranchFromTask, syncTaskIssue } from '../services/githubService';
+import { getSprintsByProject } from '../services/sprintService';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 
@@ -29,6 +38,11 @@ export default function TaskDetail() {
   const [form, setForm] = useState({});
   const [comment, setComment] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [projectTasks, setProjectTasks] = useState([]);
+  const [sprints, setSprints] = useState([]);
+  const [dependencyDraft, setDependencyDraft] = useState([]);
+  const [selectedSprintId, setSelectedSprintId] = useState('');
+  const [savingPlanning, setSavingPlanning] = useState(false);
 
   useEffect(() => { fetchTask(); }, [id]);
 
@@ -43,6 +57,16 @@ export default function TaskDetail() {
         priority: res.data.priority,
         dueDate: res.data.dueDate ? res.data.dueDate.split('T')[0] : '',
       });
+      setDependencyDraft((res.data.dependsOn || []).map((d) => d._id));
+      setSelectedSprintId(res.data.sprintId?._id || '');
+
+      const [taskListRes, sprintRes] = await Promise.all([
+        getTasksByProject(res.data.projectId),
+        getSprintsByProject(res.data.projectId),
+      ]);
+
+      setProjectTasks(taskListRes.data.filter((t) => t._id !== res.data._id));
+      setSprints(sprintRes.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -110,6 +134,34 @@ export default function TaskDetail() {
 
   const inputClasses = "w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-sm";
   const selectClasses = "w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-gray-300 outline-none text-sm";
+
+  const handleSprintChange = async (value) => {
+    setSelectedSprintId(value);
+    try {
+      await updateTaskSprint(task._id, { sprintId: value || null });
+      fetchTask();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update sprint assignment');
+    }
+  };
+
+  const handleDependencyToggle = (taskId) => {
+    setDependencyDraft((prev) =>
+      prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId]
+    );
+  };
+
+  const handleSaveDependencies = async () => {
+    setSavingPlanning(true);
+    try {
+      await updateTaskDependencies(task._id, { dependsOn: dependencyDraft });
+      fetchTask();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update dependencies');
+    } finally {
+      setSavingPlanning(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-950">
@@ -265,6 +317,78 @@ export default function TaskDetail() {
                   <p className="text-xs text-gray-600 mb-1.5">Created</p>
                   <p className="text-sm text-gray-300">{new Date(task.createdAt).toLocaleDateString()}</p>
                 </div>
+              </div>
+            </div>
+
+            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5">
+              <h3 className="text-xs font-semibold text-gray-500 mb-4 uppercase tracking-wider">Planning</h3>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs text-gray-600 mb-1.5">Sprint</p>
+                  <select
+                    value={selectedSprintId}
+                    onChange={(e) => handleSprintChange(e.target.value)}
+                    className={selectClasses}
+                  >
+                    <option value="">Backlog (no sprint)</option>
+                    {sprints.map((sprint) => (
+                      <option
+                        key={sprint._id}
+                        value={sprint._id}
+                        disabled={
+                          ['completed', 'cancelled'].includes(sprint.status) &&
+                          sprint._id !== selectedSprintId
+                        }
+                      >
+                        {sprint.name} ({sprint.status})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <p className="text-xs text-gray-600 mb-1.5">Dependencies</p>
+                  <div className="max-h-44 overflow-auto space-y-2 pr-1">
+                    {projectTasks.length === 0 && (
+                      <p className="text-xs text-gray-600">No other tasks in this project.</p>
+                    )}
+                    {projectTasks.map((depTask) => (
+                      <label
+                        key={depTask._id}
+                        className="flex items-center gap-2 text-xs text-gray-400 bg-white/[0.03] border border-white/[0.06] rounded-lg px-2 py-1.5"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={dependencyDraft.includes(depTask._id)}
+                          onChange={() => handleDependencyToggle(depTask._id)}
+                          className="accent-indigo-500"
+                        />
+                        <span className="flex-1 truncate">{depTask.title}</span>
+                        <span className="text-[10px] text-gray-600">{statusLabels[depTask.status]}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <button
+                    onClick={handleSaveDependencies}
+                    disabled={savingPlanning}
+                    className="mt-2 w-full bg-indigo-600 text-white py-2 rounded-xl text-xs font-medium hover:bg-indigo-500 transition disabled:opacity-50"
+                  >
+                    {savingPlanning ? 'Saving...' : 'Save Dependencies'}
+                  </button>
+                </div>
+
+                {task.dependencyState?.isBlocked && (
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+                    <p className="text-xs text-red-300 font-medium">Blocked by unresolved dependencies</p>
+                    <ul className="mt-1 space-y-1">
+                      {task.dependencyState.unresolved.map((dep) => (
+                        <li key={dep._id} className="text-[11px] text-red-200/90">
+                          {dep.title} ({statusLabels[dep.status] || dep.status})
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
 

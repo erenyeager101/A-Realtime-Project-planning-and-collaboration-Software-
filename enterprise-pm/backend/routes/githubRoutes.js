@@ -211,7 +211,12 @@ router.get('/repos/:owner/:repo/stats', auth, requireGitHub, async (req, res) =>
 });
 
 // POST /api/github/repos/link — Link a GitHub repo to a project
-router.post('/repos/link', auth, requireGitHub, async (req, res) => {
+router.post(
+  '/repos/link',
+  auth,
+  requireProjectRoles(['manager', 'admin'], { source: 'body', key: 'projectId' }),
+  requireGitHub,
+  async (req, res) => {
   try {
     const { projectId, repoFullName } = req.body;
     const [owner, repo] = repoFullName.split('/');
@@ -259,10 +264,16 @@ router.post('/repos/link', auth, requireGitHub, async (req, res) => {
   } catch (error) {
     res.status(error.status || 500).json({ message: error.message });
   }
-});
+}
+);
 
 // POST /api/github/repos/unlink — Unlink a GitHub repo from a project
-router.post('/repos/unlink', auth, requireGitHub, async (req, res) => {
+router.post(
+  '/repos/unlink',
+  auth,
+  requireProjectRoles(['manager', 'admin'], { source: 'body', key: 'projectId' }),
+  requireGitHub,
+  async (req, res) => {
   try {
     const { projectId } = req.body;
     const project = await Project.findById(projectId);
@@ -283,14 +294,20 @@ router.post('/repos/unlink', auth, requireGitHub, async (req, res) => {
   } catch (error) {
     res.status(error.status || 500).json({ message: error.message });
   }
-});
+}
+);
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ISSUES
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // GET /api/github/projects/:projectId/issues — List issues for linked repo
-router.get('/projects/:projectId/issues', auth, requireGitHub, async (req, res) => {
+router.get(
+  '/projects/:projectId/issues',
+  auth,
+  requireProjectRoles(['member', 'manager', 'admin'], { source: 'params', key: 'projectId' }),
+  requireGitHub,
+  async (req, res) => {
   try {
     const project = await Project.findById(req.params.projectId);
     if (!project?.github?.repoFullName) return res.status(400).json({ message: 'No GitHub repo linked' });
@@ -318,10 +335,16 @@ router.get('/projects/:projectId/issues', auth, requireGitHub, async (req, res) 
   } catch (error) {
     res.status(error.status || 500).json({ message: error.message });
   }
-});
+}
+);
 
 // POST /api/github/tasks/:taskId/create-issue — Create GitHub issue from task
-router.post('/tasks/:taskId/create-issue', auth, requireGitHub, async (req, res) => {
+router.post(
+  '/tasks/:taskId/create-issue',
+  auth,
+  requireTaskProjectRoles(['manager', 'admin'], { source: 'params', key: 'taskId' }),
+  requireGitHub,
+  async (req, res) => {
   try {
     const task = await Task.findById(req.params.taskId);
     if (!task) return res.status(404).json({ message: 'Task not found' });
@@ -379,10 +402,16 @@ router.post('/tasks/:taskId/create-issue', auth, requireGitHub, async (req, res)
   } catch (error) {
     res.status(error.status || 500).json({ message: error.message });
   }
-});
+}
+);
 
 // POST /api/github/tasks/:taskId/sync-issue — Sync task status with GitHub issue
-router.post('/tasks/:taskId/sync-issue', auth, requireGitHub, async (req, res) => {
+router.post(
+  '/tasks/:taskId/sync-issue',
+  auth,
+  requireTaskProjectRoles(['manager', 'admin'], { source: 'params', key: 'taskId' }),
+  requireGitHub,
+  async (req, res) => {
   try {
     const task = await Task.findById(req.params.taskId);
     if (!task?.github?.issueNumber) return res.status(400).json({ message: 'No linked GitHub issue' });
@@ -400,10 +429,16 @@ router.post('/tasks/:taskId/sync-issue', auth, requireGitHub, async (req, res) =
   } catch (error) {
     res.status(error.status || 500).json({ message: error.message });
   }
-});
+}
+);
 
 // POST /api/github/projects/:projectId/bulk-create-issues — Create issues for all tasks
-router.post('/projects/:projectId/bulk-create-issues', auth, requireGitHub, async (req, res) => {
+router.post(
+  '/projects/:projectId/bulk-create-issues',
+  auth,
+  requireProjectRoles(['manager', 'admin'], { source: 'params', key: 'projectId' }),
+  requireGitHub,
+  async (req, res) => {
   try {
     const project = await Project.findById(req.params.projectId);
     if (!project?.github?.repoFullName) return res.status(400).json({ message: 'No GitHub repo linked' });
@@ -434,14 +469,20 @@ router.post('/projects/:projectId/bulk-create-issues', auth, requireGitHub, asyn
   } catch (error) {
     res.status(error.status || 500).json({ message: error.message });
   }
-});
+}
+);
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // PULL REQUESTS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // GET /api/github/projects/:projectId/pulls — List PRs for linked repo
-router.get('/projects/:projectId/pulls', auth, requireGitHub, async (req, res) => {
+router.get(
+  '/projects/:projectId/pulls',
+  auth,
+  requireProjectRoles(['member', 'manager', 'admin'], { source: 'params', key: 'projectId' }),
+  requireGitHub,
+  async (req, res) => {
   try {
     const project = await Project.findById(req.params.projectId);
     if (!project?.github?.repoFullName) return res.status(400).json({ message: 'No GitHub repo linked' });
@@ -474,10 +515,16 @@ router.get('/projects/:projectId/pulls', auth, requireGitHub, async (req, res) =
   } catch (error) {
     res.status(error.status || 500).json({ message: error.message });
   }
-});
+}
+);
 
 // GET /api/github/projects/:projectId/pulls/:prNumber — Detailed PR view
-router.get('/projects/:projectId/pulls/:prNumber', auth, requireGitHub, async (req, res) => {
+router.get(
+  '/projects/:projectId/pulls/:prNumber',
+  auth,
+  requireProjectRoles(['member', 'manager', 'admin'], { source: 'params', key: 'projectId' }),
+  requireGitHub,
+  async (req, res) => {
   try {
     const project = await Project.findById(req.params.projectId);
     if (!project?.github?.repoFullName) return res.status(400).json({ message: 'No GitHub repo linked' });
@@ -520,14 +567,20 @@ router.get('/projects/:projectId/pulls/:prNumber', auth, requireGitHub, async (r
   } catch (error) {
     res.status(error.status || 500).json({ message: error.message });
   }
-});
+}
+);
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // COMMITS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // GET /api/github/projects/:projectId/commits — List commits
-router.get('/projects/:projectId/commits', auth, requireGitHub, async (req, res) => {
+router.get(
+  '/projects/:projectId/commits',
+  auth,
+  requireProjectRoles(['member', 'manager', 'admin'], { source: 'params', key: 'projectId' }),
+  requireGitHub,
+  async (req, res) => {
   try {
     const project = await Project.findById(req.params.projectId);
     if (!project?.github?.repoFullName) return res.status(400).json({ message: 'No GitHub repo linked' });
@@ -555,14 +608,20 @@ router.get('/projects/:projectId/commits', auth, requireGitHub, async (req, res)
   } catch (error) {
     res.status(error.status || 500).json({ message: error.message });
   }
-});
+}
+);
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // BRANCHES
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // GET /api/github/projects/:projectId/branches — List branches
-router.get('/projects/:projectId/branches', auth, requireGitHub, async (req, res) => {
+router.get(
+  '/projects/:projectId/branches',
+  auth,
+  requireProjectRoles(['member', 'manager', 'admin'], { source: 'params', key: 'projectId' }),
+  requireGitHub,
+  async (req, res) => {
   try {
     const project = await Project.findById(req.params.projectId);
     if (!project?.github?.repoFullName) return res.status(400).json({ message: 'No GitHub repo linked' });
@@ -581,10 +640,16 @@ router.get('/projects/:projectId/branches', auth, requireGitHub, async (req, res
   } catch (error) {
     res.status(error.status || 500).json({ message: error.message });
   }
-});
+}
+);
 
 // POST /api/github/tasks/:taskId/create-branch — Create feature branch from task
-router.post('/tasks/:taskId/create-branch', auth, requireGitHub, async (req, res) => {
+router.post(
+  '/tasks/:taskId/create-branch',
+  auth,
+  requireTaskProjectRoles(['manager', 'admin'], { source: 'params', key: 'taskId' }),
+  requireGitHub,
+  async (req, res) => {
   try {
     const task = await Task.findById(req.params.taskId);
     if (!task) return res.status(404).json({ message: 'Task not found' });
@@ -621,14 +686,20 @@ router.post('/tasks/:taskId/create-branch', auth, requireGitHub, async (req, res
   } catch (error) {
     res.status(error.status || 500).json({ message: error.message });
   }
-});
+}
+);
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // GITHUB ACTIONS (CI/CD)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // GET /api/github/projects/:projectId/actions/runs — Workflow runs
-router.get('/projects/:projectId/actions/runs', auth, requireGitHub, async (req, res) => {
+router.get(
+  '/projects/:projectId/actions/runs',
+  auth,
+  requireProjectRoles(['member', 'manager', 'admin'], { source: 'params', key: 'projectId' }),
+  requireGitHub,
+  async (req, res) => {
   try {
     const project = await Project.findById(req.params.projectId);
     if (!project?.github?.repoFullName) return res.status(400).json({ message: 'No GitHub repo linked' });
@@ -658,10 +729,16 @@ router.get('/projects/:projectId/actions/runs', auth, requireGitHub, async (req,
   } catch (error) {
     res.status(error.status || 500).json({ message: error.message });
   }
-});
+}
+);
 
 // GET /api/github/projects/:projectId/actions/workflows — List workflows
-router.get('/projects/:projectId/actions/workflows', auth, requireGitHub, async (req, res) => {
+router.get(
+  '/projects/:projectId/actions/workflows',
+  auth,
+  requireProjectRoles(['member', 'manager', 'admin'], { source: 'params', key: 'projectId' }),
+  requireGitHub,
+  async (req, res) => {
   try {
     const project = await Project.findById(req.params.projectId);
     if (!project?.github?.repoFullName) return res.status(400).json({ message: 'No GitHub repo linked' });
@@ -682,14 +759,20 @@ router.get('/projects/:projectId/actions/workflows', auth, requireGitHub, async 
   } catch (error) {
     res.status(error.status || 500).json({ message: error.message });
   }
-});
+}
+);
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // CODE SEARCH
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // GET /api/github/projects/:projectId/search — Search code in repo
-router.get('/projects/:projectId/search', auth, requireGitHub, async (req, res) => {
+router.get(
+  '/projects/:projectId/search',
+  auth,
+  requireProjectRoles(['member', 'manager', 'admin'], { source: 'params', key: 'projectId' }),
+  requireGitHub,
+  async (req, res) => {
   try {
     const project = await Project.findById(req.params.projectId);
     if (!project?.github?.repoFullName) return res.status(400).json({ message: 'No GitHub repo linked' });
@@ -713,14 +796,20 @@ router.get('/projects/:projectId/search', auth, requireGitHub, async (req, res) 
   } catch (error) {
     res.status(error.status || 500).json({ message: error.message });
   }
-});
+}
+);
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // README & FILE CONTENT
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // GET /api/github/projects/:projectId/readme — Get README
-router.get('/projects/:projectId/readme', auth, requireGitHub, async (req, res) => {
+router.get(
+  '/projects/:projectId/readme',
+  auth,
+  requireProjectRoles(['member', 'manager', 'admin'], { source: 'params', key: 'projectId' }),
+  requireGitHub,
+  async (req, res) => {
   try {
     const project = await Project.findById(req.params.projectId);
     if (!project?.github?.repoFullName) return res.status(400).json({ message: 'No GitHub repo linked' });
@@ -733,7 +822,8 @@ router.get('/projects/:projectId/readme', auth, requireGitHub, async (req, res) 
     if (error.status === 404) return res.json({ content: '', url: '' });
     res.status(error.status || 500).json({ message: error.message });
   }
-});
+}
+);
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // WEBHOOKS (incoming from GitHub)
@@ -893,7 +983,12 @@ router.post('/webhooks', express.raw({ type: 'application/json' }), async (req, 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // GET /api/github/projects/:projectId/activity — GitHub repo events
-router.get('/projects/:projectId/activity', auth, requireGitHub, async (req, res) => {
+router.get(
+  '/projects/:projectId/activity',
+  auth,
+  requireProjectRoles(['member', 'manager', 'admin'], { source: 'params', key: 'projectId' }),
+  requireGitHub,
+  async (req, res) => {
   try {
     const project = await Project.findById(req.params.projectId);
     if (!project?.github?.repoFullName) return res.status(400).json({ message: 'No GitHub repo linked' });
@@ -912,7 +1007,8 @@ router.get('/projects/:projectId/activity', auth, requireGitHub, async (req, res
   } catch (error) {
     res.status(error.status || 500).json({ message: error.message });
   }
-});
+}
+);
 
 // Helper: Summarize GitHub event for display
 function summarizeEvent(event) {

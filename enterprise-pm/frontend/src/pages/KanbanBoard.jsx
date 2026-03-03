@@ -16,6 +16,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { getTasksByProject, createTask, updateTaskStatus } from '../services/taskService';
 import { getProject } from '../services/projectService';
+import { createSprint, getSprintsByProject } from '../services/sprintService';
 import { useSocket } from '../context/SocketContext';
 import Navbar from '../components/Navbar';
 
@@ -61,6 +62,11 @@ function TaskCard({ task }) {
           <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${priorityColors[task.priority]}`}>
             {task.priority}
           </span>
+          {task.dependencyState?.isBlocked && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-red-500/10 text-red-400 border border-red-500/20">
+              blocked
+            </span>
+          )}
           {task.assignee && (
             <span className="w-5 h-5 bg-indigo-500/20 text-indigo-400 rounded-md flex items-center justify-center text-[10px] font-bold border border-indigo-500/10">
               {task.assignee.name?.charAt(0).toUpperCase()}
@@ -105,6 +111,15 @@ export default function KanbanBoard() {
   const [showAddTask, setShowAddTask] = useState(null);
   const [newTask, setNewTask] = useState({ title: '', priority: 'medium' });
   const [activeTask, setActiveTask] = useState(null);
+  const [sprints, setSprints] = useState([]);
+  const [selectedSprintId, setSelectedSprintId] = useState('');
+  const [showCreateSprint, setShowCreateSprint] = useState(false);
+  const [newSprint, setNewSprint] = useState({
+    name: '',
+    goal: '',
+    startDate: '',
+    endDate: '',
+  });
   const socket = useSocket();
 
   const sensors = useSensors(
@@ -113,7 +128,7 @@ export default function KanbanBoard() {
 
   useEffect(() => {
     fetchData();
-  }, [projectId]);
+  }, [projectId, selectedSprintId]);
 
   useEffect(() => {
     if (socket && projectId) {
@@ -141,12 +156,18 @@ export default function KanbanBoard() {
 
   const fetchData = async () => {
     try {
+      const taskQuery = selectedSprintId
+        ? { scope: 'sprint', sprintId: selectedSprintId }
+        : { scope: 'backlog' };
+
       const [projRes, taskRes] = await Promise.all([
         getProject(projectId),
-        getTasksByProject(projectId),
+        getTasksByProject(projectId, taskQuery),
       ]);
+      const sprintRes = await getSprintsByProject(projectId);
       setProject(projRes.data);
       setTasks(taskRes.data);
+      setSprints(sprintRes.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -157,12 +178,31 @@ export default function KanbanBoard() {
   const handleAddTask = async (status) => {
     if (!newTask.title.trim()) return;
     try {
-      await createTask({ title: newTask.title, priority: newTask.priority, projectId, status });
+      await createTask({
+        title: newTask.title,
+        priority: newTask.priority,
+        projectId,
+        status,
+        sprintId: selectedSprintId || null,
+      });
       setNewTask({ title: '', priority: 'medium' });
       setShowAddTask(null);
       fetchData();
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleCreateSprint = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await createSprint(projectId, newSprint);
+      setSprints((prev) => [res.data, ...prev]);
+      setSelectedSprintId(res.data._id);
+      setShowCreateSprint(false);
+      setNewSprint({ name: '', goal: '', startDate: '', endDate: '' });
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to create sprint');
     }
   };
 
@@ -189,13 +229,14 @@ export default function KanbanBoard() {
       setTasks((prev) => prev.map((t) => (t._id === taskId ? { ...t, status: newStatus } : t)));
       try {
         await updateTaskStatus(taskId, { status: newStatus });
-      } catch (err) {
+      } catch {
         fetchData();
       }
     }
   };
 
   const getColumnTasks = (columnId) => tasks.filter((t) => t.status === columnId);
+  const selectedSprint = sprints.find((s) => s._id === selectedSprintId);
 
   if (loading) {
     return (
@@ -221,7 +262,89 @@ export default function KanbanBoard() {
           <span className="text-gray-300 font-medium">Board</span>
         </div>
 
-        <h1 className="text-xl font-bold text-white mb-6">Kanban Board</h1>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-xl font-bold text-white">Kanban Board</h1>
+            <p className="text-xs text-gray-500 mt-1">
+              {selectedSprintId
+                ? `Sprint: ${selectedSprint?.name || 'Selected sprint'}`
+                : 'Backlog (tasks not assigned to any sprint)'}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <select
+              value={selectedSprintId}
+              onChange={(e) => setSelectedSprintId(e.target.value)}
+              className="text-sm px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-300 outline-none"
+            >
+              <option value="">Backlog</option>
+              {sprints.map((sprint) => (
+                <option key={sprint._id} value={sprint._id}>
+                  {sprint.name} ({sprint.status})
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => setShowCreateSprint((prev) => !prev)}
+              className="text-sm px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition"
+            >
+              New Sprint
+            </button>
+          </div>
+        </div>
+
+        {showCreateSprint && (
+          <form
+            onSubmit={handleCreateSprint}
+            className="mb-6 bg-white/[0.03] border border-white/[0.06] rounded-2xl p-4 grid grid-cols-1 md:grid-cols-4 gap-3"
+          >
+            <input
+              type="text"
+              required
+              value={newSprint.name}
+              onChange={(e) => setNewSprint({ ...newSprint, name: e.target.value })}
+              placeholder="Sprint name"
+              className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-600 text-sm outline-none"
+            />
+            <input
+              type="date"
+              required
+              value={newSprint.startDate}
+              onChange={(e) => setNewSprint({ ...newSprint, startDate: e.target.value })}
+              className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-300 text-sm outline-none"
+            />
+            <input
+              type="date"
+              required
+              value={newSprint.endDate}
+              onChange={(e) => setNewSprint({ ...newSprint, endDate: e.target.value })}
+              className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-300 text-sm outline-none"
+            />
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-sm py-2 rounded-xl font-medium transition"
+              >
+                Create
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCreateSprint(false)}
+                className="px-3 py-2 text-gray-500 text-sm hover:text-gray-300 transition"
+              >
+                Cancel
+              </button>
+            </div>
+            <input
+              type="text"
+              value={newSprint.goal}
+              onChange={(e) => setNewSprint({ ...newSprint, goal: e.target.value })}
+              placeholder="Goal (optional)"
+              className="md:col-span-4 px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-600 text-sm outline-none"
+            />
+          </form>
+        )}
 
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

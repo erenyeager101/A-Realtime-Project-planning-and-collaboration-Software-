@@ -10,6 +10,7 @@ export default function ProjectDetails() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [memberEmail, setMemberEmail] = useState('');
+  const [memberRole, setMemberRole] = useState('member');
   const [showAddMember, setShowAddMember] = useState(false);
 
   useEffect(() => {
@@ -34,8 +35,9 @@ export default function ProjectDetails() {
   const handleAddMember = async (e) => {
     e.preventDefault();
     try {
-      await addMember(id, { userId: memberEmail });
+      await addMember(id, { email: memberEmail, role: memberRole });
       setMemberEmail('');
+      setMemberRole('member');
       setShowAddMember(false);
       fetchData();
     } catch (err) {
@@ -189,12 +191,21 @@ export default function ProjectDetails() {
           {showAddMember && (
             <form onSubmit={handleAddMember} className="flex gap-2 mb-4">
               <input
-                type="text"
+                type="email"
                 value={memberEmail}
                 onChange={(e) => setMemberEmail(e.target.value)}
-                placeholder="User ID"
+                placeholder="User email"
                 className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-sm"
               />
+              <select
+                value={memberRole}
+                onChange={(e) => setMemberRole(e.target.value)}
+                className="px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-gray-300 text-sm outline-none"
+              >
+                <option value="member">member</option>
+                <option value="manager">manager</option>
+                <option value="admin">admin</option>
+              </select>
               <button
                 type="submit"
                 className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm hover:bg-indigo-500 transition font-medium"
