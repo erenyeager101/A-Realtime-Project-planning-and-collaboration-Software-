@@ -209,149 +209,17 @@ Go to **http://localhost:5173** → Register → Start building.
 
 ---
 
-## Environment Variables Reference
+## Core Features
 
-All variables are configured in `backend/.env`. See [`backend/.env.example`](enterprise-pm/backend/.env.example) for the template.
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `MONGO_URI` | MongoDB connection string | **Yes** |
-| `JWT_SECRET` | Secret for signing JWT tokens (any random string) | **Yes** |
-| `AI_PROVIDER` | Active AI provider: `mistral`, `gemini`, or `ollama` | **Yes** |
-| `MISTRAL_API_KEY` | Mistral API key | If using Mistral |
-| `GEMINI_API_KEY` | Google Gemini API key | If using Gemini |
-| `OLLAMA_BASE_URL` | Ollama server URL (default: `http://localhost:11434`) | If using Ollama |
-| `GITHUB_CLIENT_ID` | GitHub OAuth App Client ID | Optional |
-| `GITHUB_CLIENT_SECRET` | GitHub OAuth App Client Secret | Optional |
-| `GITHUB_CALLBACK_URL` | GitHub OAuth callback URL | Optional |
-| `PORT` | Server port (default: `5000`) | No |
-| `CLIENT_URL` | Frontend URL (default: `http://localhost:5173`) | No |
+- JWT Authentication + Role Based Access  
+- Project & Team Management  
+- Kanban Task Board  
+- Task Comments & Activity Logs  
+- Real-time Notifications  
+- Offline-First Sync Engine *(planned)*  
+- Daily Project Digest *(planned)*  
+- Anonymous Blocker Reporting *(planned)*  
 
 ---
 
-## Project Structure
 
-```
-enterprise-pm/
-├── Dockerfile              # Single-image Docker build
-├── .dockerignore
-├── README.md
-│
-├── backend/
-│   ├── server.js           # Express + Socket.IO + static file serving
-│   ├── .env.example        # Environment variable template
-│   ├── package.json
-│   ├── middleware/
-│   │   └── auth.js         # JWT verification + RBAC (admin/manager/member)
-│   ├── models/
-│   │   ├── User.js         # User schema with password hashing
-│   │   ├── Project.js      # Project with members, status, dates
-│   │   ├── Task.js         # Task with priority, status, comments
-│   │   ├── Notification.js # Real-time notification storage
-│   │   ├── Activity.js     # Action audit log
-│   │   ├── AIConversation.js  # Persistent AI chat history
-│   │   ├── GeneratedDoc.js    # AI-generated documents
-│   │   └── Resource.js        # Knowledge base resources
-│   ├── routes/
-│   │   ├── authRoutes.js       # Register, login, profile, onboarding
-│   │   ├── projectRoutes.js    # CRUD projects, manage members
-│   │   ├── taskRoutes.js       # CRUD tasks, comments, status updates
-│   │   ├── aiRoutes.js         # AI planner, research, docs, health
-│   │   ├── settingsRoutes.js   # Admin settings & first-time setup
-│   │   ├── notificationRoutes.js
-│   │   ├── resourceRoutes.js
-│   │   └── githubRoutes.js     # OAuth, repos, issues, branches, PRs
-│   └── services/
-│       ├── aiService.js        # Multi-provider AI (Mistral/Gemini/Ollama)
-│       └── githubService.js    # GitHub API wrapper
-│
-└── frontend/
-    ├── vite.config.js          # Dev proxy to backend
-    ├── package.json
-    └── src/
-        ├── App.jsx             # Route definitions
-        ├── index.css           # Tailwind + custom styles
-        ├── components/
-        │   ├── Navbar.jsx          # Top nav with AI tools dropdown
-        │   ├── NotificationBell.jsx # Real-time notification indicator
-        │   └── PrivateRoute.jsx     # Auth guard wrapper
-        ├── context/
-        │   ├── AuthContext.jsx      # JWT auth state management
-        │   └── SocketContext.jsx    # Socket.IO connection provider
-        ├── pages/
-        │   ├── Setup.jsx           # First-time setup wizard (no auth)
-        │   ├── Login.jsx           # Split-screen login
-        │   ├── Register.jsx        # Registration with social proof
-        │   ├── Onboarding.jsx      # 3-step profile personalization
-        │   ├── Dashboard.jsx       # Project hub + One-Click Project Pack
-        │   ├── ProjectDetails.jsx  # Project overview + team management
-        │   ├── KanbanBoard.jsx     # Drag-and-drop task board
-        │   ├── TaskDetail.jsx      # Task view/edit + comments + GitHub
-        │   ├── AIPlanner.jsx       # AI project plan generator
-        │   ├── ResearchAssistant.jsx # Context-aware AI chatbot
-        │   ├── DocGenerator.jsx    # SRS, PPT, Architecture doc generator
-        │   ├── ProjectHealth.jsx   # AI health scoring dashboard
-        │   ├── ResourceHub.jsx     # Knowledge base per project
-        │   ├── Settings.jsx        # Admin configuration panel
-        │   ├── GitHubDashboard.jsx # GitHub account & repo management
-        │   └── ProjectGitHub.jsx   # Per-project GitHub integration
-        └── services/               # Axios API clients for each module
-```
-
----
-
-## How It Helps Students
-
-| Pain Point | How EnterprisePM Solves It |
-|-----------|--------------------------|
-| "We planned everything on WhatsApp and lost track" | Kanban board with real-time sync. Everyone sees the same board, always. |
-| "I don't know what tasks to create for my project" | AI Planner generates 15-30 tasks from a one-line description. |
-| "I have to write the SRS the night before submission" | AI Doc Generator creates IEEE 830 SRS, architecture docs, and use cases in 30 seconds. |
-| "My guide asked for a PPT outline and demo script" | AI generates presentation outlines with speaker notes and timed demo scripts. |
-| "I don't know if my project is on track" | Project Health gives a score out of 100 and flags overdue tasks, idle members, and risks. |
-| "I want to connect my GitHub repo to my task board" | Link repos, create issues from tasks, track PRs, and create feature branches — all from the UI. |
-| "I'm a beginner and don't know the best tech stack" | AI recommends tech stack, breaks down tasks by category, and estimates hours. |
-| "I need research help for my project topic" | Research Assistant is a project-aware AI that answers questions with context. |
-| "Our team has no visibility into who's doing what" | Task assignees, progress bars, activity logs, and real-time notifications. |
-
----
-
-## Pages & Screenshots
-
-| Page | Description |
-|------|-------------|
-| `/setup` | First-time configuration wizard (Database → AI → GitHub) |
-| `/login` | Split-screen login with branded marketing panel |
-| `/register` | Registration with social proof elements |
-| `/onboarding` | 3-step profile setup (profession, experience, goals) |
-| `/dashboard` | Project hub with One-Click Project Pack AI feature |
-| `/project/:id` | Project overview, team, progress, AI quick actions |
-| `/project/:id/board` | Kanban board with drag-and-drop and real-time sync |
-| `/task/:id` | Task detail with comments, editing, and GitHub integration |
-| `/ai/planner` | AI project plan generator |
-| `/project/:id/research` | Context-aware AI research chatbot |
-| `/project/:id/docs` | AI document generator (SRS, PPT, Architecture, etc.) |
-| `/project/:id/health` | AI-powered project health dashboard |
-| `/project/:id/resources` | Knowledge base and resource hub |
-| `/settings` | Admin settings panel (API keys, database, providers) |
-| `/github` | GitHub account management and repo linking |
-
----
-
-## Contributing
-
-1. Fork this repository
-2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Commit your changes: `git commit -m "feat: add your feature"`
-4. Push to your branch: `git push origin feature/your-feature`
-5. Open a Pull Request
-
----
-
-## License
-
-MIT — Use it, modify it, ship it. Just don't blame us if your project scores less than an A.
-
----
-
-**Built with frustration from too many semester projects managed on WhatsApp.**
