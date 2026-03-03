@@ -23,6 +23,13 @@ const taskSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Project',
       required: true,
+      index: true,
+    },
+    sprintId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Sprint',
+      default: null,
+      index: true,
     },
     assignee: {
       type: mongoose.Schema.Types.ObjectId,
@@ -42,6 +49,12 @@ const taskSchema = new mongoose.Schema(
       type: Date,
     },
     comments: [commentSchema],
+    dependsOn: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Task',
+      },
+    ],
     order: {
       type: Number,
       default: 0,
@@ -64,5 +77,8 @@ const taskSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+taskSchema.index({ projectId: 1, status: 1, order: 1 });
+taskSchema.index({ projectId: 1, sprintId: 1, status: 1, order: 1 });
 
 module.exports = mongoose.model('Task', taskSchema);

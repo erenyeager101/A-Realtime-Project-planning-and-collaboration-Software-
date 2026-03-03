@@ -2,7 +2,9 @@ const express = require('express');
 const Project = require('../models/Project');
 const Notification = require('../models/Notification');
 const Activity = require('../models/Activity');
-const { auth, authorize } = require('../middleware/auth');
+const User = require('../models/User');
+const { auth } = require('../middleware/auth');
+const { requireProjectRoles } = require('../middleware/projectAccess');
 
 const router = express.Router();
 
@@ -55,7 +57,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // GET /api/projects/:id — Get project by ID
-router.get('/:id', auth, async (req, res) => {
+router.get('/:id', auth, requireProjectRoles(['member', 'manager', 'admin'], { source: 'params', key: 'id' }), async (req, res) => {
   try {
     const project = await Project.findById(req.params.id)
       .populate('owner', 'name email')
@@ -72,10 +74,11 @@ router.get('/:id', auth, async (req, res) => {
 });
 
 // PUT /api/projects/:id — Update project
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', auth, requireProjectRoles(['manager', 'admin'], { source: 'params', key: 'id' }), async (req, res) => {
   try {
     const project = await Project.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
+      runValidators: true,
     })
       .populate('owner', 'name email')
       .populate('members.user', 'name email');
@@ -91,31 +94,44 @@ router.put('/:id', auth, async (req, res) => {
 });
 
 // POST /api/projects/:id/members — Add member to project
-router.post('/:id/members', auth, async (req, res) => {
+router.post('/:id/members', auth, requireProjectRoles(['admin'], { source: 'params', key: 'id' }), async (req, res) => {
   try {
-    const { userId, role } = req.body;
+    const { userId, email, role } = req.body;
     const project = await Project.findById(req.params.id);
 
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
     }
 
+    if (!userId && !email) {
+      return res.status(400).json({ message: 'userId or email is required' });
+    }
+
+    const targetUser = userId
+      ? await User.findById(userId).select('_id')
+      : await User.findOne({ email: String(email).toLowerCase().trim() }).select('_id');
+
+    if (!targetUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
     // Check if user is already a member
     const isMember = project.members.some(
-      (m) => m.user.toString() === userId
+      (m) => m.user.toString() === targetUser._id.toString()
     );
     if (isMember) {
       return res.status(400).json({ message: 'User is already a member' });
     }
 
-    project.members.push({ user: userId, role: role || 'member' });
+    const normalizedRole = ['member', 'manager', 'admin'].includes(role) ? role : 'member';
+    project.members.push({ user: targetUser._id, role: normalizedRole });
     await project.save();
     await project.populate('owner', 'name email');
     await project.populate('members.user', 'name email');
 
     // Create notification for the added member
     await Notification.create({
-      user: userId,
+      user: targetUser._id,
       type: 'member_added',
       message: `You were added to project "${project.name}"`,
       projectId: project._id,
@@ -140,7 +156,7 @@ router.post('/:id/members', auth, async (req, res) => {
 });
 
 // DELETE /api/projects/:id — Delete project
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', auth, requireProjectRoles(['admin'], { source: 'params', key: 'id' }), async (req, res) => {
   try {
     const project = await Project.findById(req.params.id);
     if (!project) {

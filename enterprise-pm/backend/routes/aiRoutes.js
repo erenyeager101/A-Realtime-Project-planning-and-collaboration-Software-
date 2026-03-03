@@ -13,6 +13,10 @@ const {
   breakdownTask,
   generateProjectPack,
 } = require('../services/aiService');
+const {
+  requireProjectRoles,
+  loadProjectAccess,
+} = require('../middleware/projectAccess');
 
 const router = express.Router();
 
@@ -23,6 +27,19 @@ router.post('/plan', auth, async (req, res) => {
     const { description, projectId } = req.body;
     if (!description) {
       return res.status(400).json({ message: 'Project description is required' });
+    }
+
+    if (projectId) {
+      const access = await loadProjectAccess(projectId, req.user._id);
+      if (access.error === 'project_not_found') {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+      if (access.error) {
+        return res.status(403).json({ message: 'You do not have access to this project' });
+      }
+      if (!['manager', 'admin'].includes(access.role)) {
+        return res.status(403).json({ message: 'Only managers or admins can create project tasks from AI plans' });
+      }
     }
 
     const plan = await generateProjectPlan(description);
@@ -73,6 +90,14 @@ router.post('/breakdown', auth, async (req, res) => {
 
     let projectContext = {};
     if (projectId) {
+      const access = await loadProjectAccess(projectId, req.user._id);
+      if (access.error === 'project_not_found') {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+      if (access.error) {
+        return res.status(403).json({ message: 'You do not have access to this project' });
+      }
+
       const project = await Project.findById(projectId);
       if (project) {
         projectContext.projectName = project.name;
@@ -90,7 +115,11 @@ router.post('/breakdown', auth, async (req, res) => {
 
 // ── AI RESEARCH ASSISTANT ───────────────────────────────────────────
 // POST /api/ai/research/:projectId — Ask a research question in project context
-router.post('/research/:projectId', auth, async (req, res) => {
+router.post(
+  '/research/:projectId',
+  auth,
+  requireProjectRoles(['member', 'manager', 'admin'], { source: 'params', key: 'projectId' }),
+  async (req, res) => {
   try {
     const { question, conversationId } = req.body;
     const { projectId } = req.params;
@@ -150,10 +179,15 @@ router.post('/research/:projectId', auth, async (req, res) => {
     console.error('AI Research error:', error.message);
     res.status(500).json({ message: 'AI generation failed: ' + error.message });
   }
-});
+}
+);
 
 // GET /api/ai/conversations/:projectId — List conversations for a project
-router.get('/conversations/:projectId', auth, async (req, res) => {
+router.get(
+  '/conversations/:projectId',
+  auth,
+  requireProjectRoles(['member', 'manager', 'admin'], { source: 'params', key: 'projectId' }),
+  async (req, res) => {
   try {
     const conversations = await AIConversation.find({
       projectId: req.params.projectId,
@@ -172,12 +206,20 @@ router.get('/conversations/:projectId', auth, async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-});
+}
+);
 
 // GET /api/ai/conversations/:projectId/:conversationId — Get full conversation
-router.get('/conversations/:projectId/:conversationId', auth, async (req, res) => {
+router.get(
+  '/conversations/:projectId/:conversationId',
+  auth,
+  requireProjectRoles(['member', 'manager', 'admin'], { source: 'params', key: 'projectId' }),
+  async (req, res) => {
   try {
-    const conversation = await AIConversation.findById(req.params.conversationId);
+    const conversation = await AIConversation.findOne({
+      _id: req.params.conversationId,
+      projectId: req.params.projectId,
+    });
     if (!conversation) {
       return res.status(404).json({ message: 'Conversation not found' });
     }
@@ -185,11 +227,16 @@ router.get('/conversations/:projectId/:conversationId', auth, async (req, res) =
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-});
+}
+);
 
 // ── AI DOCUMENT GENERATOR ───────────────────────────────────────────
 // POST /api/ai/generate-doc/:projectId — Generate an academic document
-router.post('/generate-doc/:projectId', auth, async (req, res) => {
+router.post(
+  '/generate-doc/:projectId',
+  auth,
+  requireProjectRoles(['member', 'manager', 'admin'], { source: 'params', key: 'projectId' }),
+  async (req, res) => {
   try {
     const { type } = req.body; // srs | ppt_outline | demo_script | architecture | use_cases
     const { projectId } = req.params;
@@ -241,10 +288,15 @@ router.post('/generate-doc/:projectId', auth, async (req, res) => {
     console.error('AI Doc error:', error.message);
     res.status(500).json({ message: 'AI generation failed: ' + error.message });
   }
-});
+}
+);
 
 // GET /api/ai/docs/:projectId — List generated docs for a project
-router.get('/docs/:projectId', auth, async (req, res) => {
+router.get(
+  '/docs/:projectId',
+  auth,
+  requireProjectRoles(['member', 'manager', 'admin'], { source: 'params', key: 'projectId' }),
+  async (req, res) => {
   try {
     const docs = await GeneratedDoc.find({ projectId: req.params.projectId })
       .populate('generatedBy', 'name')
@@ -253,12 +305,20 @@ router.get('/docs/:projectId', auth, async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-});
+}
+);
 
 // GET /api/ai/docs/:projectId/:docId — Get single document
-router.get('/docs/:projectId/:docId', auth, async (req, res) => {
+router.get(
+  '/docs/:projectId/:docId',
+  auth,
+  requireProjectRoles(['member', 'manager', 'admin'], { source: 'params', key: 'projectId' }),
+  async (req, res) => {
   try {
-    const doc = await GeneratedDoc.findById(req.params.docId).populate('generatedBy', 'name');
+    const doc = await GeneratedDoc.findOne({
+      _id: req.params.docId,
+      projectId: req.params.projectId,
+    }).populate('generatedBy', 'name');
     if (!doc) {
       return res.status(404).json({ message: 'Document not found' });
     }
@@ -266,21 +326,37 @@ router.get('/docs/:projectId/:docId', auth, async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-});
+}
+);
 
 // DELETE /api/ai/docs/:projectId/:docId — Delete a document
-router.delete('/docs/:projectId/:docId', auth, async (req, res) => {
+router.delete(
+  '/docs/:projectId/:docId',
+  auth,
+  requireProjectRoles(['manager', 'admin'], { source: 'params', key: 'projectId' }),
+  async (req, res) => {
   try {
-    await GeneratedDoc.findByIdAndDelete(req.params.docId);
+    const deleted = await GeneratedDoc.findOneAndDelete({
+      _id: req.params.docId,
+      projectId: req.params.projectId,
+    });
+    if (!deleted) {
+      return res.status(404).json({ message: 'Document not found' });
+    }
     res.json({ message: 'Document deleted' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-});
+}
+);
 
 // ── PROJECT HEALTH ANALYSIS ─────────────────────────────────────────
 // GET /api/ai/health/:projectId — Analyze project health
-router.get('/health/:projectId', auth, async (req, res) => {
+router.get(
+  '/health/:projectId',
+  auth,
+  requireProjectRoles(['member', 'manager', 'admin'], { source: 'params', key: 'projectId' }),
+  async (req, res) => {
   try {
     const { projectId } = req.params;
 
@@ -333,7 +409,8 @@ router.get('/health/:projectId', auth, async (req, res) => {
     console.error('AI Health error:', error.message);
     res.status(500).json({ message: 'AI analysis failed: ' + error.message });
   }
-});
+}
+);
 
 // ── ONE-CLICK PROJECT PACK ──────────────────────────────────────────
 // POST /api/ai/project-pack — Generate full project pack + create project & tasks

@@ -8,13 +8,16 @@ const router = express.Router();
 // POST /api/auth/register — Register a new user
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
     }
+
+    const userCount = await User.countDocuments();
+    const role = userCount === 0 ? 'admin' : 'member';
 
     const user = new User({ name, email, password, role });
     await user.save();

@@ -1,11 +1,16 @@
 const express = require('express');
 const Resource = require('../models/Resource');
 const { auth } = require('../middleware/auth');
+const { requireProjectRoles } = require('../middleware/projectAccess');
 
 const router = express.Router();
 
 // GET /api/resources/:projectId — Get all resources for a project
-router.get('/:projectId', auth, async (req, res) => {
+router.get(
+  '/:projectId',
+  auth,
+  requireProjectRoles(['member', 'manager', 'admin'], { source: 'params', key: 'projectId' }),
+  async (req, res) => {
   try {
     const { type, tag } = req.query;
     const filter = { projectId: req.params.projectId };
@@ -20,10 +25,15 @@ router.get('/:projectId', auth, async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-});
+}
+);
 
 // POST /api/resources/:projectId — Add a resource
-router.post('/:projectId', auth, async (req, res) => {
+router.post(
+  '/:projectId',
+  auth,
+  requireProjectRoles(['member', 'manager', 'admin'], { source: 'params', key: 'projectId' }),
+  async (req, res) => {
   try {
     const { type, title, content, url, tags } = req.body;
 
@@ -42,14 +52,21 @@ router.post('/:projectId', auth, async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-});
+}
+);
 
 // PUT /api/resources/:projectId/:id — Update a resource
-router.put('/:projectId/:id', auth, async (req, res) => {
+router.put(
+  '/:projectId/:id',
+  auth,
+  requireProjectRoles(['member', 'manager', 'admin'], { source: 'params', key: 'projectId' }),
+  async (req, res) => {
   try {
-    const resource = await Resource.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    }).populate('addedBy', 'name');
+    const resource = await Resource.findOneAndUpdate(
+      { _id: req.params.id, projectId: req.params.projectId },
+      req.body,
+      { new: true, runValidators: true }
+    ).populate('addedBy', 'name');
 
     if (!resource) {
       return res.status(404).json({ message: 'Resource not found' });
@@ -58,12 +75,20 @@ router.put('/:projectId/:id', auth, async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-});
+}
+);
 
 // PATCH /api/resources/:projectId/:id/pin — Toggle pin
-router.patch('/:projectId/:id/pin', auth, async (req, res) => {
+router.patch(
+  '/:projectId/:id/pin',
+  auth,
+  requireProjectRoles(['member', 'manager', 'admin'], { source: 'params', key: 'projectId' }),
+  async (req, res) => {
   try {
-    const resource = await Resource.findById(req.params.id);
+    const resource = await Resource.findOne({
+      _id: req.params.id,
+      projectId: req.params.projectId,
+    });
     if (!resource) {
       return res.status(404).json({ message: 'Resource not found' });
     }
@@ -73,16 +98,29 @@ router.patch('/:projectId/:id/pin', auth, async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-});
+}
+);
 
 // DELETE /api/resources/:projectId/:id — Delete a resource
-router.delete('/:projectId/:id', auth, async (req, res) => {
+router.delete(
+  '/:projectId/:id',
+  auth,
+  requireProjectRoles(['member', 'manager', 'admin'], { source: 'params', key: 'projectId' }),
+  async (req, res) => {
   try {
-    await Resource.findByIdAndDelete(req.params.id);
+    const deleted = await Resource.findOneAndDelete({
+      _id: req.params.id,
+      projectId: req.params.projectId,
+    });
+
+    if (!deleted) {
+      return res.status(404).json({ message: 'Resource not found' });
+    }
     res.json({ message: 'Resource deleted' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-});
+}
+);
 
 module.exports = router;

@@ -9,6 +9,10 @@ const Project = require('../models/Project');
 const Task = require('../models/Task');
 const Activity = require('../models/Activity');
 const gh = require('../services/githubService');
+const {
+  requireProjectRoles,
+  requireTaskProjectRoles,
+} = require('../middleware/projectAccess');
 
 const router = express.Router();
 

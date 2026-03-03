@@ -14,6 +14,7 @@ const aiRoutes = require('./routes/aiRoutes');
 const resourceRoutes = require('./routes/resourceRoutes');
 const githubRoutes = require('./routes/githubRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
+const sprintRoutes = require('./routes/sprintRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -42,6 +43,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/resources', resourceRoutes);
 app.use('/api/github', githubRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/sprints', sprintRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
