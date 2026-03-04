@@ -8,7 +8,7 @@
 
 Every semester, the same story repeats:
 
-- Your team plans the project on WhatsApp — messages get buried in 200 unread texts.
+- As team plans the project on WhatsApp — messages get buried in 200 unread texts.
 - Tasks live in a shared Google Doc that nobody updates.
 - One person does 80% of the work, but there's no proof.
 - The night before the demo, you're writing the SRS from scratch.
