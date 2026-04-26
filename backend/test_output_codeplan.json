@@ -1,0 +1,583 @@
+{
+  "projectName": "TaskManagementSystem",
+  "structure": {
+    "folders": [
+      "backend",
+      "frontend",
+      "docs"
+    ],
+    "files": [
+      {
+        "path": "backend/models/User.js",
+        "purpose": "User model definition"
+      },
+      {
+        "path": "backend/models/Project.js",
+        "purpose": "Project model definition"
+      },
+      {
+        "path": "backend/models/Task.js",
+        "purpose": "Task model definition"
+      },
+      {
+        "path": "backend/controllers/UserController.js",
+        "purpose": "User controller with CRUD operations"
+      },
+      {
+        "path": "backend/controllers/ProjectController.js",
+        "purpose": "Project controller with CRUD operations"
+      },
+      {
+        "path": "backend/controllers/TaskController.js",
+        "purpose": "Task controller with CRUD operations"
+      },
+      {
+        "path": "backend/services/UserService.js",
+        "purpose": "User service implementation"
+      },
+      {
+        "path": "backend/services/ProjectService.js",
+        "purpose": "Project service implementation"
+      },
+      {
+        "path": "backend/services/TaskService.js",
+        "purpose": "Task service implementation"
+      },
+      {
+        "path": "backend/middleware/auth.js",
+        "purpose": "Authentication middleware"
+      },
+      {
+        "path": "backend/middleware/validation.js",
+        "purpose": "Request validation middleware"
+      },
+      {
+        "path": "backend/routes/api.js",
+        "purpose": "API routes definition"
+      },
+      {
+        "path": "backend/config/db.js",
+        "purpose": "Database configuration"
+      },
+      {
+        "path": "backend/config/passport.js",
+        "purpose": "Passport configuration"
+      },
+      {
+        "path": "backend/server.js",
+        "purpose": "Express server setup"
+      },
+      {
+        "path": "frontend/src/components/UserList.js",
+        "purpose": "User list component"
+      },
+      {
+        "path": "frontend/src/components/ProjectList.js",
+        "purpose": "Project list component"
+      },
+      {
+        "path": "frontend/src/components/TaskList.js",
+        "purpose": "Task list component"
+      },
+      {
+        "path": "frontend/src/components/UserForm.js",
+        "purpose": "User form component"
+      },
+      {
+        "path": "frontend/src/components/ProjectForm.js",
+        "purpose": "Project form component"
+      },
+      {
+        "path": "frontend/src/components/TaskForm.js",
+        "purpose": "Task form component"
+      },
+      {
+        "path": "frontend/src/pages/HomePage.js",
+        "purpose": "Home page component"
+      },
+      {
+        "path": "frontend/src/pages/UserPage.js",
+        "purpose": "User management page"
+      },
+      {
+        "path": "frontend/src/pages/ProjectPage.js",
+        "purpose": "Project management page"
+      },
+      {
+        "path": "frontend/src/pages/TaskPage.js",
+        "purpose": "Task management page"
+      },
+      {
+        "path": "frontend/src/hooks/useApi.js",
+        "purpose": "Custom hook for API calls"
+      },
+      {
+        "path": "frontend/src/services/api.js",
+        "purpose": "API service implementation"
+      },
+      {
+        "path": "frontend/src/App.js",
+        "purpose": "Main application component"
+      },
+      {
+        "path": "frontend/src/index.js",
+        "purpose": "Application entry point"
+      },
+      {
+        "path": "backend/tests/User.test.js",
+        "purpose": "User model and service tests"
+      },
+      {
+        "path": "backend/tests/Project.test.js",
+        "purpose": "Project model and service tests"
+      },
+      {
+        "path": "backend/tests/Task.test.js",
+        "purpose": "Task model and service tests"
+      },
+      {
+        "path": "backend/tests/UserController.test.js",
+        "purpose": "User controller tests"
+      },
+      {
+        "path": "backend/tests/ProjectController.test.js",
+        "purpose": "Project controller tests"
+      },
+      {
+        "path": "backend/tests/TaskController.test.js",
+        "purpose": "Task controller tests"
+      },
+      {
+        "path": "frontend/tests/UserList.test.js",
+        "purpose": "User list component tests"
+      },
+      {
+        "path": "frontend/tests/ProjectList.test.js",
+        "purpose": "Project list component tests"
+      },
+      {
+        "path": "frontend/tests/TaskList.test.js",
+        "purpose": "Task list component tests"
+      },
+      {
+        "path": "docs/api.md",
+        "purpose": "API documentation"
+      },
+      {
+        "path": "docs/database.md",
+        "purpose": "Database schema documentation"
+      },
+      {
+        "path": "docs/frontend.md",
+        "purpose": "Frontend component documentation"
+      },
+      {
+        "path": "package.json",
+        "purpose": "Project dependencies and scripts"
+      },
+      {
+        "path": "README.md",
+        "purpose": "Project overview and setup instructions"
+      }
+    ]
+  },
+  "backend": {
+    "models": [
+      {
+        "name": "User",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "email",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "role",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "createdAt",
+            "type": "date",
+            "required": true
+          }
+        ],
+        "relationships": []
+      },
+      {
+        "name": "Project",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "title",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "description",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "dueDate",
+            "type": "date",
+            "required": true
+          }
+        ],
+        "relationships": [
+          {
+            "name": "members",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Task",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "title",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "description",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "priority",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "status",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "assigneeId",
+            "type": "string",
+            "required": false
+          }
+        ],
+        "relationships": [
+          {
+            "name": "projectId",
+            "type": "string",
+            "required": true
+          }
+        ]
+      }
+    ],
+    "controllers": [
+      {
+        "name": "UserController",
+        "methods": [
+          "list",
+          "create",
+          "update",
+          "delete"
+        ],
+        "routes": [
+          {
+            "method": "GET",
+            "path": "/api/users"
+          },
+          {
+            "method": "POST",
+            "path": "/api/users"
+          },
+          {
+            "method": "PUT",
+            "path": "/api/users/:id"
+          },
+          {
+            "method": "DELETE",
+            "path": "/api/users/:id"
+          }
+        ]
+      },
+      {
+        "name": "ProjectController",
+        "methods": [
+          "list",
+          "create",
+          "update",
+          "delete",
+          "addMember"
+        ],
+        "routes": [
+          {
+            "method": "GET",
+            "path": "/api/projects"
+          },
+          {
+            "method": "POST",
+            "path": "/api/projects"
+          },
+          {
+            "method": "PUT",
+            "path": "/api/projects/:id"
+          },
+          {
+            "method": "DELETE",
+            "path": "/api/projects/:id"
+          },
+          {
+            "method": "POST",
+            "path": "/api/projects/:id/members"
+          }
+        ]
+      },
+      {
+        "name": "TaskController",
+        "methods": [
+          "list",
+          "create",
+          "update",
+          "delete",
+          "assignTo",
+          "addComment"
+        ],
+        "routes": [
+          {
+            "method": "GET",
+            "path": "/api/tasks"
+          },
+          {
+            "method": "POST",
+            "path": "/api/tasks"
+          },
+          {
+            "method": "PUT",
+            "path": "/api/tasks/:id"
+          },
+          {
+            "method": "DELETE",
+            "path": "/api/tasks/:id"
+          },
+          {
+            "method": "POST",
+            "path": "/api/tasks/:id/assign"
+          },
+          {
+            "method": "POST",
+            "path": "/api/tasks/:id/comments"
+          }
+        ]
+      }
+    ],
+    "services": [
+      {
+        "name": "UserService",
+        "methods": [
+          "getUsers",
+          "createUser",
+          "updateUser",
+          "deleteUser"
+        ]
+      },
+      {
+        "name": "ProjectService",
+        "methods": [
+          "getProjects",
+          "createProject",
+          "updateProject",
+          "deleteProject",
+          "addMember"
+        ]
+      },
+      {
+        "name": "TaskService",
+        "methods": [
+          "getTasks",
+          "createTask",
+          "updateTask",
+          "deleteTask",
+          "assignTo",
+          "addComment"
+        ]
+      }
+    ],
+    "middleware": [
+      "auth",
+      "validation"
+    ]
+  },
+  "frontend": {
+    "components": [
+      {
+        "name": "UserList",
+        "props": [
+          "users",
+          "onEdit",
+          "onDelete"
+        ],
+        "state": []
+      },
+      {
+        "name": "ProjectList",
+        "props": [
+          "projects",
+          "onEdit",
+          "onDelete"
+        ],
+        "state": []
+      },
+      {
+        "name": "TaskList",
+        "props": [
+          "tasks",
+          "onEdit",
+          "onDelete"
+        ],
+        "state": []
+      },
+      {
+        "name": "UserForm",
+        "props": [
+          "user",
+          "onSubmit",
+          "onCancel"
+        ],
+        "state": [
+          "formData"
+        ]
+      },
+      {
+        "name": "ProjectForm",
+        "props": [
+          "project",
+          "onSubmit",
+          "onCancel"
+        ],
+        "state": [
+          "formData"
+        ]
+      },
+      {
+        "name": "TaskForm",
+        "props": [
+          "task",
+          "onSubmit",
+          "onCancel"
+        ],
+        "state": [
+          "formData"
+        ]
+      }
+    ],
+    "pages": [
+      {
+        "name": "HomePage",
+        "route": "/"
+      },
+      {
+        "name": "UserPage",
+        "route": "/users"
+      },
+      {
+        "name": "ProjectPage",
+        "route": "/projects"
+      },
+      {
+        "name": "TaskPage",
+        "route": "/tasks"
+      }
+    ],
+    "hooks": [
+      "useApi"
+    ],
+    "services": [
+      "api"
+    ]
+  },
+  "database": {
+    "type": "mongodb",
+    "collections": [
+      {
+        "name": "users",
+        "schema": "User model schema"
+      },
+      {
+        "name": "projects",
+        "schema": "Project model schema"
+      },
+      {
+        "name": "tasks",
+        "schema": "Task model schema"
+      }
+    ]
+  },
+  "tests": {
+    "unit": [
+      "User model and service",
+      "Project model and service",
+      "Task model and service",
+      "User controller",
+      "Project controller",
+      "Task controller",
+      "User list component",
+      "Project list component",
+      "Task list component"
+    ],
+    "integration": [
+      "/api/users",
+      "/api/projects",
+      "/api/tasks"
+    ]
+  },
+  "configFiles": [
+    {
+      "name": "package.json",
+      "purpose": "Project dependencies and scripts"
+    },
+    {
+      "name": "backend/config/db.js",
+      "purpose": "Database configuration"
+    },
+    {
+      "name": "backend/config/passport.js",
+      "purpose": "Passport configuration"
+    },
+    {
+      "name": "backend/server.js",
+      "purpose": "Express server setup"
+    },
+    {
+      "name": "frontend/src/App.js",
+      "purpose": "Main application component"
+    },
+    {
+      "name": "frontend/src/index.js",
+      "purpose": "Application entry point"
+    }
+  ]
+}

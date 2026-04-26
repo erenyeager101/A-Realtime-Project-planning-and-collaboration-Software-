@@ -1,0 +1,152 @@
+[
+  {
+    "path": "backend/models/User.js",
+    "size": 2458,
+    "preview": "const mongoose = require('mongoose');\nconst bcrypt = require('bcrypt');\nconst jwt = require('jsonwebtoken');\n\n/**\n * User Schema\n * @typedef {Object} User\n * @property {string} id - The unique identif..."
+  },
+  {
+    "path": "backend/models/Project.js",
+    "size": 2330,
+    "preview": "const mongoose = require('mongoose');\n\n/**\n * Project Schema\n * @module models/Project\n * @description Represents a Project entity for managing tasks.\n */\nconst projectSchema = new mongoose.Schema({\n ..."
+  },
+  {
+    "path": "backend/models/Task.js",
+    "size": 2045,
+    "preview": "const mongoose = require('mongoose');\nconst { Schema } = mongoose;\n\n/**\n * Task Schema\n * @typedef {Object} Task\n * @property {string} id - The unique identifier for the task\n * @property {string} tit..."
+  },
+  {
+    "path": "backend/controllers/UserController.js",
+    "size": 2466,
+    "preview": "const express = require('express');\nconst router = express.Router();\nconst User = require('../models/User');\nconst { body, validationResult } = require('express-validator');\n\n// GET /api/users\nrouter...."
+  },
+  {
+    "path": "backend/controllers/ProjectController.js",
+    "size": 3360,
+    "preview": "const express = require('express');\nconst router = express.Router();\nconst Project = require('../models/Project');\nconst { body, validationResult } = require('express-validator');\n\n// GET /api/project..."
+  },
+  {
+    "path": "backend/controllers/TaskController.js",
+    "size": 4006,
+    "preview": "const express = require('express');\nconst router = express.Router();\nconst Task = require('../models/Task');\nconst { body, validationResult } = require('express-validator');\n\n// GET /api/tasks\nrouter...."
+  },
+  {
+    "path": "backend/services/UserServiceService.js",
+    "size": 3158,
+    "preview": "const User = require('../models/User');\nconst bcrypt = require('bcryptjs');\nconst jwt = require('jsonwebtoken');\n\nclass UserService {\n  async createUser(userData) {\n    try {\n      const { username, e..."
+  },
+  {
+    "path": "backend/services/ProjectServiceService.js",
+    "size": 2611,
+    "preview": "const Project = require('../models/Project');\nconst { NotFoundError, ValidationError } = require('../utils/errors');\n\nclass ProjectService {\n  /**\n   * Create a new project\n   * @param {Object} projec..."
+  },
+  {
+    "path": "backend/services/TaskServiceService.js",
+    "size": 1387,
+    "preview": "const Task = require('../models/Task');\n\nclass TaskService {\n  async createTask(taskData) {\n    try {\n      const task = new Task(taskData);\n      await task.save();\n      return task;\n    } catch (er..."
+  },
+  {
+    "path": "frontend/src/components/UserList.jsx",
+    "size": 2858,
+    "preview": "import React from 'react';\nimport PropTypes from 'prop-types';\n\n/**\n * UserList component displays a list of users with edit and delete functionality.\n *\n * @component\n * @param {Object} props - Compo..."
+  },
+  {
+    "path": "frontend/src/components/ProjectList.jsx",
+    "size": 2976,
+    "preview": "import React from 'react';\nimport PropTypes from 'prop-types';\n\n/**\n * ProjectList Component\n *\n * @param {Object} props - Component props\n * @param {Array} props.projects - List of projects to displa..."
+  },
+  {
+    "path": "frontend/src/components/TaskList.jsx",
+    "size": 2429,
+    "preview": "import React from 'react';\nimport PropTypes from 'prop-types';\n\n/**\n * TaskList component displays a list of tasks with edit and delete functionality.\n *\n * @param {Object} props - Component props.\n *..."
+  },
+  {
+    "path": "frontend/src/components/UserForm.jsx",
+    "size": 4715,
+    "preview": "import React, { useState, useEffect } from 'react';\nimport PropTypes from 'prop-types';\n\n/**\n * UserForm component for creating or updating user information.\n *\n * @component\n * @param {Object} props ..."
+  },
+  {
+    "path": "frontend/src/components/ProjectForm.jsx",
+    "size": 4994,
+    "preview": "import React, { useState, useEffect } from 'react';\nimport PropTypes from 'prop-types';\n\n/**\n * ProjectForm component for creating and editing projects.\n *\n * @param {Object} props - Component props.\n..."
+  },
+  {
+    "path": "frontend/src/components/TaskForm.jsx",
+    "size": 6323,
+    "preview": "import React, { useState, useEffect } from 'react';\nimport PropTypes from 'prop-types';\n\n/**\n * TaskForm component for creating or editing tasks within a project.\n *\n * @component\n * @param {Object} p..."
+  },
+  {
+    "path": "frontend/src/pages/HomePage.jsx",
+    "size": 5361,
+    "preview": "import React, { useState, useEffect } from 'react';\nimport { useNavigate } from 'react-router-dom';\nimport UserList from '../components/UserList';\nimport ProjectList from '../components/ProjectList';\n..."
+  },
+  {
+    "path": "frontend/src/pages/UserPage.jsx",
+    "size": 5238,
+    "preview": "import React, { useState, useEffect } from 'react';\nimport { useParams, useNavigate } from 'react-router-dom';\nimport UserList from '../components/UserList';\nimport ProjectList from '../components/Pro..."
+  },
+  {
+    "path": "frontend/src/pages/ProjectPage.jsx",
+    "size": 5681,
+    "preview": "import React, { useState, useEffect } from 'react';\nimport { useNavigate } from 'react-router-dom';\nimport UserList from '../components/UserList';\nimport ProjectList from '../components/ProjectList';\n..."
+  },
+  {
+    "path": "frontend/src/pages/TaskPage.jsx",
+    "size": 5125,
+    "preview": "import React, { useState, useEffect } from 'react';\nimport { useNavigate } from 'react-router-dom';\nimport UserList from '../components/UserList';\nimport ProjectList from '../components/ProjectList';\n..."
+  },
+  {
+    "path": "frontend/src/services/api.js",
+    "size": 2176,
+    "preview": "import axios from 'axios';\n\nconst API_BASE_URL = process.env.REACT_APP_API_BASE_URL;\n\nconst api = axios.create({\n  baseURL: API_BASE_URL,\n  headers: {\n    'Content-Type': 'application/json',\n  },\n});\n..."
+  },
+  {
+    "path": "package.json",
+    "size": 458,
+    "preview": "{\n  \"name\": \"taskmanagementsystem\",\n  \"version\": \"1.0.0\",\n  \"description\": \"Generated from UML diagram - TaskManagementSystem\",\n  \"scripts\": {\n    \"install:all\": \"cd backend && npm install && cd ../fr..."
+  },
+  {
+    "path": "backend/package.json",
+    "size": 463,
+    "preview": "{\n  \"name\": \"user-backend\",\n  \"version\": \"1.0.0\",\n  \"description\": \"Generated backend API\",\n  \"main\": \"server.js\",\n  \"scripts\": {\n    \"start\": \"node server.js\",\n    \"dev\": \"nodemon server.js\"\n  },\n  \"..."
+  },
+  {
+    "path": "frontend/package.json",
+    "size": 762,
+    "preview": "{\n  \"name\": \"taskmanagementsystem-frontend\",\n  \"private\": true,\n  \"version\": \"1.0.0\",\n  \"type\": \"module\",\n  \"scripts\": {\n    \"dev\": \"vite\",\n    \"build\": \"vite build\",\n    \"lint\": \"eslint . --ext .js,...."
+  },
+  {
+    "path": "backend/server.js",
+    "size": 1800,
+    "preview": "const express = require('express');\nconst mongoose = require('mongoose');\nconst cors = require('cors');\nrequire('dotenv').config();\n\n// Import models\nconst User = require('./models/User');\nconst Proje..."
+  },
+  {
+    "path": "frontend/src/App.jsx",
+    "size": 802,
+    "preview": "import { BrowserRouter, Routes, Route } from 'react-router-dom';\nimport HomePage from './pages/HomePage';\nimport UserPage from './pages/UserPage';\nimport ProjectPage from './pages/ProjectPage';\nimport..."
+  },
+  {
+    "path": "frontend/src/main.jsx",
+    "size": 235,
+    "preview": "import React from 'react';\nimport ReactDOM from 'react-dom/client';\nimport App from './App';\nimport './index.css';\n\nReactDOM.createRoot(document.getElementById('root')).render(\n  <React.StrictMode>\n  ..."
+  },
+  {
+    "path": "backend/.env.example",
+    "size": 448,
+    "preview": "# Server Configuration\nPORT=5000\n\n# MongoDB Connection\nMONGO_URI=mongodb://localhost:27017/taskmanagementsystem\n\n# JWT Configuration\nJWT_SECRET=your-super-secret-jwt-key-change-in-production\n\n# CORS\nC..."
+  },
+  {
+    "path": "frontend/vite.config.js",
+    "size": 358,
+    "preview": "import { defineConfig } from 'vite';\nimport react from '@vitejs/plugin-react';\n\nexport default defineConfig({\n  plugins: [react()],\n  server: {\n    port: 5173,\n    proxy: {\n      '/api': {\n        tar..."
+  },
+  {
+    "path": "frontend/.eslintrc.js",
+    "size": 526,
+    "preview": "module.exports = {\n  root: true,\n  env: { browser: true, es2020: true },\n  extends: [\n    'eslint:recommended',\n    'plugin:react/recommended',\n    'plugin:react-hooks/recommended',\n  ],\n  ignorePatte..."
+  },
+  {
+    "path": "README.md",
+    "size": 3603,
+    "preview": "# TaskManagementSystem\n\nTaskManagementSystem was generated from UML architecture diagrams using AI-powered code generation.\n\n## 📋 Generated From\n\n**Diagram Analysis:**\n- **Diagram Type**: uml-class\n-..."
+  }
+]
