@@ -52,7 +52,7 @@ const getErrorMessage = (error) => {
       case 500:
       case 502:
       case 503:
-        return 'Server error occurred. Please try again later.';
+        return data?.error || data?.details || 'Server error occurred. Please try again later.';
       default:
         return data?.error || data?.details || `Request failed (${status})`;
     }

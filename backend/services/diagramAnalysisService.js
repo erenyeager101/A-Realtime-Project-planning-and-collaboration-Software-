@@ -9,6 +9,76 @@ const { Mistral } = require('@mistralai/mistralai');
 
 // Initialize Mistral client with coding API key
 const mistral = new Mistral({ apiKey: process.env.MISTRAL_API_KEY_CODING });
+const DEFAULT_VISION_MODELS = ['pixtral-large-latest', 'pixtral-12b-latest', 'pixtral-12b-2409'];
+
+function ensureMistralConfigured() {
+  if (!process.env.MISTRAL_API_KEY_CODING) {
+    throw new Error('AI diagram analysis is not configured. Set MISTRAL_API_KEY_CODING in backend/.env.');
+  }
+}
+
+function getVisionModelCandidates() {
+  const candidates = [
+    process.env.MISTRAL_VISION_MODEL,
+    process.env.MISTRAL_MODEL,
+    ...DEFAULT_VISION_MODELS
+  ].filter(Boolean);
+
+  return [...new Set(candidates)];
+}
+
+function parseStatusCodeFromError(error) {
+  const message = String(error?.message || '');
+  const match = message.match(/Status\s+(\d{3})/i);
+  return match ? Number(match[1]) : null;
+}
+
+function isModelImageCapabilityError(error) {
+  const message = String(error?.message || '').toLowerCase();
+  return message.includes('image input is not enabled for this model')
+    || message.includes('"code":"3051"')
+    || message.includes("code':'3051'")
+    || message.includes('code: "3051"')
+    || message.includes('code: 3051');
+}
+
+async function analyzeDiagramWithModel({ model, systemPrompt, userPrompt, mimeType, base64Image }) {
+  const response = await mistral.chat.complete({
+    model,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: userPrompt },
+          {
+            type: 'image_url',
+            imageUrl: {
+              url: `data:${mimeType};base64,${base64Image}`,
+              detail: 'high'
+            }
+          }
+        ]
+      }
+    ],
+    temperature: 0.2,
+    maxTokens: 4096,
+    responseFormat: { type: 'json_object' }
+  });
+
+  const content = response?.choices?.[0]?.message?.content;
+  const rawText = typeof content === 'string'
+    ? content
+    : Array.isArray(content)
+      ? content.map((part) => part?.text || '').join('\n')
+      : JSON.stringify(content);
+
+  if (!rawText) {
+    throw new Error('Diagram analysis model returned empty output');
+  }
+
+  return JSON.parse(rawText);
+}
 
 /**
  * Analyze an uploaded diagram image
@@ -17,6 +87,8 @@ const mistral = new Mistral({ apiKey: process.env.MISTRAL_API_KEY_CODING });
  * @returns {Object} Structured analysis of the diagram
  */
 async function analyzeDiagram(imagePath, diagramType = 'auto-detect') {
+  ensureMistralConfigured();
+
   // Read image and convert to base64
   const imageBuffer = fs.readFileSync(imagePath);
   const base64Image = imageBuffer.toString('base64');
@@ -70,39 +142,39 @@ Be thorough and accurate. If uncertain about specific details, make educated gue
     ? 'Analyze this software diagram and extract all entities, relationships, methods, and architectural patterns. Return a detailed JSON analysis.'
     : `Analyze this ${diagramType} diagram and extract all relevant information. Return a detailed JSON analysis.`;
 
-  try {
-    const response = await mistral.chat.complete({
-      model: process.env.MISTRAL_MODEL || 'codestral-latest',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: userPrompt },
-            {
-              type: 'image_url',
-              imageUrl: {
-                url: `data:${mimeType};base64,${base64Image}`,
-                detail: 'high'
-              }
-            }
-          ]
-        }
-      ],
-      temperature: 0.2,
-      maxTokens: 4096,
-      responseFormat: { type: 'json_object' }
-    });
+  const modelCandidates = getVisionModelCandidates();
+  let lastError = null;
 
-    const content = response.choices[0].message.content;
-    const analysis = JSON.parse(content);
+  for (const model of modelCandidates) {
+    try {
+      const analysis = await analyzeDiagramWithModel({
+        model,
+        systemPrompt,
+        userPrompt,
+        mimeType,
+        base64Image
+      });
 
-    // Validate and enrich the analysis
-    return validateAndEnrichAnalysis(analysis);
-  } catch (error) {
-    console.error('Diagram analysis error:', error);
-    throw new Error(`Failed to analyze diagram: ${error.message}`);
+      // Validate and enrich the analysis
+      return validateAndEnrichAnalysis(analysis);
+    } catch (error) {
+      lastError = error;
+
+      // Try next model when current model does not support images.
+      if (isModelImageCapabilityError(error)) {
+        continue;
+      }
+
+      throw new Error(`Failed to analyze diagram using model "${model}": ${error.message}`);
+    }
   }
+
+  const tried = modelCandidates.join(', ');
+  const statusCode = parseStatusCodeFromError(lastError);
+  const prefix = statusCode ? `[HTTP_${statusCode}] ` : '';
+  throw new Error(
+    `${prefix}Failed to analyze diagram: no configured Mistral model accepted image input. Tried: ${tried}. Last error: ${lastError?.message || 'unknown error'}`
+  );
 }
 
 /**
@@ -112,6 +184,8 @@ Be thorough and accurate. If uncertain about specific details, make educated gue
  * @returns {Object} Code generation plan
  */
 async function generateCodePlan(analysis, options = {}) {
+  ensureMistralConfigured();
+
   const {
     targetLanguage = 'javascript',
     targetFramework = 'express-react-mongodb',

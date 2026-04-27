@@ -128,7 +128,7 @@ async function generateCodeFiles(codePlan, diagramAnalysis, options = {}) {
   // Execute all generation tasks
   const results = await Promise.all(generationTasks);
   files.push(...results);
-\
+
   return files;
 }
 

@@ -14,7 +14,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { getTasksByProject, createTask, updateTaskStatus } from '../services/taskService';
+import { getTasksByProject, createTask, updateTaskStatus, updateTaskSprint } from '../services/taskService';
 import { getProject } from '../services/projectService';
 import { createSprint, getSprintsByProject } from '../services/sprintService';
 import { useSocket } from '../context/SocketContext';
@@ -34,7 +34,7 @@ const priorityColors = {
   urgent: 'bg-red-500/10 text-red-400 border border-red-500/20',
 };
 
-function TaskCard({ task }) {
+function TaskCard({ task, onTransfer }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task._id,
   });
@@ -47,14 +47,16 @@ function TaskCard({ task }) {
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <Link
-        to={`/task/${task._id}`}
-        className="block bg-white/[0.04] rounded-xl p-3.5 border border-white/[0.06] hover:bg-white/[0.07] hover:border-white/10 transition cursor-grab active:cursor-grabbing group"
-        onClick={(e) => {
-          if (isDragging) e.preventDefault();
-        }}
-      >
-        <h4 className="text-sm font-medium text-gray-200 group-hover:text-white transition">{task.title}</h4>
+      <div className="bg-white/[0.04] rounded-xl p-3.5 border border-white/[0.06] hover:bg-white/[0.07] hover:border-white/10 transition cursor-grab active:cursor-grabbing group">
+        <Link
+          to={`/task/${task._id}`}
+          className="block"
+          onClick={(e) => {
+            if (isDragging) e.preventDefault();
+          }}
+        >
+          <h4 className="text-sm font-medium text-gray-200 group-hover:text-white transition">{task.title}</h4>
+        </Link>
         {task.description && (
           <p className="text-xs text-gray-600 mt-1.5 line-clamp-2">{task.description}</p>
         )}
@@ -86,7 +88,24 @@ function TaskCard({ task }) {
             {task.comments.length}
           </div>
         )}
-      </Link>
+        <div className="flex items-center justify-between mt-3 pt-2 border-t border-white/5">
+          <span className="text-[10px] text-gray-500">
+            {task.sprintId?.name ? `Sprint: ${task.sprintId.name}` : 'Backlog'}
+          </span>
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onTransfer(task);
+            }}
+            className="text-[10px] px-2 py-1 rounded-lg bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 hover:bg-indigo-500/20 transition"
+          >
+            Move
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -114,6 +133,9 @@ export default function KanbanBoard() {
   const [sprints, setSprints] = useState([]);
   const [selectedSprintId, setSelectedSprintId] = useState('');
   const [showCreateSprint, setShowCreateSprint] = useState(false);
+  const [transferTask, setTransferTask] = useState(null);
+  const [transferSprintId, setTransferSprintId] = useState('');
+  const [isTransferring, setIsTransferring] = useState(false);
   const [newSprint, setNewSprint] = useState({
     name: '',
     goal: '',
@@ -232,6 +254,30 @@ export default function KanbanBoard() {
       } catch {
         fetchData();
       }
+    }
+  };
+
+  const openTransferModal = (task) => {
+    setTransferTask(task);
+    setTransferSprintId(task.sprintId?._id || '');
+  };
+
+  const closeTransferModal = () => {
+    setTransferTask(null);
+    setTransferSprintId('');
+    setIsTransferring(false);
+  };
+
+  const handleTransferTask = async () => {
+    if (!transferTask) return;
+    try {
+      setIsTransferring(true);
+      await updateTaskSprint(transferTask._id, { sprintId: transferSprintId || null });
+      closeTransferModal();
+      fetchData();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to move task to selected sprint');
+      setIsTransferring(false);
     }
   };
 
@@ -408,7 +454,7 @@ export default function KanbanBoard() {
                   <SortableContext items={columnTasks.map((t) => t._id)} strategy={verticalListSortingStrategy} id={column.id}>
                     <div className="space-y-2 min-h-[100px]" data-column={column.id}>
                       {columnTasks.map((task) => (
-                        <TaskCard key={task._id} task={task} />
+                        <TaskCard key={task._id} task={task} onTransfer={openTransferModal} />
                       ))}
                     </div>
                   </SortableContext>
@@ -420,6 +466,51 @@ export default function KanbanBoard() {
             <TaskOverlay task={activeTask} />
           </DragOverlay>
         </DndContext>
+
+        {transferTask && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+            <div className="w-full max-w-md bg-slate-900 border border-white/10 rounded-2xl p-5">
+              <h3 className="text-lg font-semibold text-white mb-1">Move Task to Sprint</h3>
+              <p className="text-sm text-gray-400 mb-4">
+                Choose where <span className="text-gray-200 font-medium">{transferTask.title}</span> should go.
+              </p>
+
+              <select
+                value={transferSprintId}
+                onChange={(e) => setTransferSprintId(e.target.value)}
+                className="w-full text-sm px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-300 outline-none mb-4"
+              >
+                <option value="">Backlog</option>
+                {sprints
+                  .filter((sprint) => !['completed', 'cancelled'].includes(sprint.status))
+                  .map((sprint) => (
+                    <option key={sprint._id} value={sprint._id}>
+                      {sprint.name} ({sprint.status})
+                    </option>
+                  ))}
+              </select>
+
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={closeTransferModal}
+                  className="px-3 py-2 text-sm text-gray-400 hover:text-gray-200 transition"
+                  disabled={isTransferring}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleTransferTask}
+                  className="px-4 py-2 text-sm rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition disabled:opacity-60"
+                  disabled={isTransferring}
+                >
+                  {isTransferring ? 'Moving...' : 'Move Task'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

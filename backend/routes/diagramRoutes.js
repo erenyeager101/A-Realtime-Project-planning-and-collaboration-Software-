@@ -27,6 +27,17 @@ const gitBranchService = require('../services/gitBranchService');
 
 const router = express.Router();
 
+function inferStatusFromErrorMessage(error) {
+  const message = String(error?.message || '');
+  const markerMatch = message.match(/\[HTTP_(\d{3})\]/i);
+  if (markerMatch) return Number(markerMatch[1]);
+
+  const statusMatch = message.match(/Status\s+(\d{3})/i);
+  if (statusMatch) return Number(statusMatch[1]);
+
+  return null;
+}
+
 // Configure multer for image uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -128,9 +139,25 @@ router.post(
       });
     } catch (error) {
       console.error('Diagram analysis error:', error);
-      res.status(500).json({
-        error: error.message,
-        details: 'Failed to analyze diagram. Please try again with a clearer image.'
+      const isConfigurationError = typeof error.message === 'string'
+        && error.message.includes('not configured');
+      const providerStatus = inferStatusFromErrorMessage(error);
+      const status = isConfigurationError
+        ? 503
+        : providerStatus === 400
+          ? 400
+          : providerStatus === 401 || providerStatus === 403
+            ? providerStatus
+            : providerStatus && providerStatus >= 500
+              ? 502
+              : 500;
+      res.status(status).json({
+        error: String(error.message || 'Failed to analyze diagram'),
+        details: isConfigurationError
+          ? 'AI provider is not configured on the server. Add MISTRAL_API_KEY_CODING and restart backend.'
+          : status === 400
+            ? 'The selected AI model rejected the image request. Set MISTRAL_VISION_MODEL to a vision-capable model (for example: pixtral-large-latest) and retry.'
+            : 'Failed to analyze diagram. Please try again with a clearer image.'
       });
     } finally {
       // Clean up temp file
@@ -321,6 +348,18 @@ router.post(
       } else if (error.message?.includes('GitHub API 404')) {
         status = 404;
         errorDetails = 'Repository not found. Please check the GitHub link.';
+      } else {
+        const providerStatus = inferStatusFromErrorMessage(error);
+        if (providerStatus === 400) {
+          status = 400;
+          errorDetails = 'AI provider rejected the diagram request. Configure MISTRAL_VISION_MODEL with a vision-capable model and retry.';
+        } else if (providerStatus === 401 || providerStatus === 403) {
+          status = providerStatus;
+          errorDetails = 'AI provider authentication/permission issue. Verify Mistral API key and model access.';
+        } else if (providerStatus && providerStatus >= 500) {
+          status = 502;
+          errorDetails = 'AI provider is temporarily unavailable. Please retry shortly.';
+        }
       }
 
       res.status(status).json({

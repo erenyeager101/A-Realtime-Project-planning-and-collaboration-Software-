@@ -20,10 +20,47 @@ const diagramRoutes = require('./routes/diagramRoutes');
 const app = express();
 const server = http.createServer(app);
 
+const DEFAULT_CLIENT_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:5000',
+  'http://127.0.0.1:5000',
+  'http://127.0.0.1:5173',
+  'https://a-realtime-project-planning-and-col.vercel.app'
+];
+
+const parseAllowedOrigins = () => {
+  const configured = [
+    process.env.CLIENT_URL,
+    ...(process.env.CLIENT_URLS || '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean)
+  ].filter(Boolean);
+
+  return [...new Set([...DEFAULT_CLIENT_ORIGINS, ...configured])];
+};
+
+const allowedOrigins = parseAllowedOrigins();
+
+const corsOriginHandler = (origin, callback) => {
+  // Allow server-to-server and local tools without Origin header
+  if (!origin) {
+    callback(null, true);
+    return;
+  }
+
+  if (allowedOrigins.includes(origin)) {
+    callback(null, true);
+    return;
+  }
+
+  callback(new Error(`CORS blocked for origin: ${origin}`));
+};
+
 // Socket.IO setup
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: corsOriginHandler,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   },
 });
@@ -32,7 +69,7 @@ const io = new Server(server, {
 app.set('io', io);
 
 // Middleware
-app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173' }));
+app.use(cors({ origin: corsOriginHandler }));
 app.use(express.json());
 
 // Routes
